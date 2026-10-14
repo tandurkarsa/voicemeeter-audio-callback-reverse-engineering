@@ -575,6 +575,31 @@ PDF X.1.2.9 punya error:
 - Mode sequential ≠ bit flag
 - Dokumentasi lama
 
+### ⚠️ 11. Callback WAJIB Passthrough, atau Audio Hilang
+
+Ketika callback aktif, Voicemeeter **menyerahkan kontrol output buffer**
+ke aplikasi kita. Kalau kita tidak menulis ke buffer `w[]`, output jadi
+**silence** (audio hilang total).
+
+**Fix:** Copy `r[i]` → `w[i]` sebelum DSP.
+
+```python
+import ctypes
+ctypes.memmove(dst_ptr, src_ptr, nbs * 4)  # zero-copy
+```
+
+**Khusus mode MAIN:** karena `nbi = strips + buses`, bus read ada di
+offset `nbi - nbo`:
+
+```python
+n_strips = nbi - nbo       # = 34 saat Potato
+ctypes.memmove(w[i], r[n_strips + i], nbs * 4)
+```
+
+**Kenapa ini penting:** Tanpa passthrough, contoh `01` dan `02` akan
+membuat musik hilang — membingungkan user baru. Selalu passthrough dulu,
+DSP kemudian.
+
 **Selalu verifikasi empiris!**
 
 ---

@@ -54,18 +54,57 @@ class BufferHead(ctypes.Structure):
         ("nbi", ctypes.c_long), ("nbo", ctypes.c_long),
     ]
 
+class BufferFull(ctypes.Structure):
+    _fields_ = [
+        ("sr",  ctypes.c_long), ("nbs", ctypes.c_long),
+        ("nbi", ctypes.c_long), ("nbo", ctypes.c_long),
+        ("r",   ctypes.POINTER(ctypes.c_float) * 128),
+        ("w",   ctypes.POINTER(ctypes.c_float) * 128),
+    ]
+
 
 # Global stats per test
 current_stats = {"cmds": {}, "buffer": None}
 
 
 def callback(lpUser, nCommand, lpData, nnn):
+    """Callback — logs command + passthrough audio."""
     name = CMD_NAMES.get(nCommand, f"UNKNOWN_0x{nCommand:X}")
     current_stats["cmds"][name] = current_stats["cmds"].get(name, 0) + 1
 
-    if nCommand in (0x0A, 0x0B, 0x14) and lpData and current_stats["buffer"] is None:
-        h = ctypes.cast(lpData, ctypes.POINTER(BufferHead)).contents
-        current_stats["buffer"] = (h.sr, h.nbs, h.nbi, h.nbo)
+    if not lpData:
+        return 0
+    if nCommand not in (0x0A, 0x0B, 0x14):
+        return 0
+
+    # Parse buffer
+    raw = ctypes.cast(lpData, ctypes.POINTER(BufferHead)).contents
+    if current_stats["buffer"] is None:
+        current_stats["buffer"] = (raw.sr, raw.nbs, raw.nbi, raw.nbo)
+
+    # ─── PASSTHROUGH (so music keeps playing) ───
+    class BufFull(ctypes.Structure):
+        _fields_ = [
+            ("sr",  ctypes.c_long), ("nbs", ctypes.c_long),
+            ("nbi", ctypes.c_long), ("nbo", ctypes.c_long),
+            ("r",   ctypes.POINTER(ctypes.c_float) * 128),
+            ("w",   ctypes.POINTER(ctypes.c_float) * 128),
+        ]
+    full = ctypes.cast(lpData, ctypes.POINTER(BufFull)).contents
+    nbs, nbi, nbo = int(full.nbs), int(full.nbi), int(full.nbo)
+
+    if nCommand == 0x14:  # MAIN
+        n_strips = nbi - nbo
+        for i in range(nbo):
+            s, d = full.r[n_strips + i], full.w[i]
+            if s and d:
+                ctypes.memmove(d, s, nbs * 4)
+    else:
+        for i in range(min(nbi, nbo)):
+            s, d = full.r[i], full.w[i]
+            if s and d:
+                ctypes.memmove(d, s, nbs * 4)
+
     return 0
 
 
@@ -159,10 +198,14 @@ def main():
     log.info("  SUMMARY")
     log.info("=" * 60)
 
+    expected_invalid = {0}   # Mode 0 = expected to fail
     for mode, r in results.items():
         label = f"Mode {mode} ({bin(mode):>5})"
         if not r.get("ok"):
-            log.info(f"  {label}: ❌ ret={r.get('ret')}")
+            if mode in expected_invalid:
+                log.info(f"  {label}: ⚠️  ret={r.get('ret')}  (EXPECTED — mode 0 invalid)")
+            else:
+                log.info(f"  {label}: ❌ ret={r.get('ret')}")
         else:
             cmds = ", ".join(f"{k}={v}" for k, v in r["cmds"].items())
             buf = r["buffer"]

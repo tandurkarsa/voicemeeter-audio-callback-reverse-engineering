@@ -9,33 +9,28 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Added
 - Initial release
 - Complete reverse-engineering notes for Voicemeeter Audio Callback API
-- Verified on Voicemeeter Potato 3.1.3.0 (September 2026)
+- Verified on Voicemeeter Potato 3.1.3.0 (Sept 2026)
 - Working Python examples using `ctypes`:
   - `01_minimal_callback.py` — Hello world
-  - `02_mode_explorer.py` — Test all modes (0/1/2/4/7)
+  - `02_mode_explorer.py` — Test modes 0/1/2/4/7
   - `03_passthrough_audio.py` — Anti audio-disappear
-  - `04_channel_meter.py` — Real-time level meter
-- `CREDITS.md` — Transparent attribution of human + AI collaboration
+  - `04_channel_meter.py` — Live 34-ch meter
+- `CREDITS.md` — Human + AI attribution
+- `docs/TEST_REPORT.md` — Verified test results
 
 ### Discovery Highlights
-- **Mode is bit flag** (1=IN, 2=OUT, 4=MAIN), not sequential
-- **Command codes**: `0x01, 0x02, 0x03, 0x0A, 0x0B, 0x14`
-- **Mode MAIN layout**: `nbi=98, nbo=64`, passthrough offset +34
-- **Callback signature 4 args** (2-arg version gives `nCommand=0`)
-- Mode 0 = **invalid** (returns `-100`)
+- Mode is **bit flag**: IN=1, OUT=2, MAIN=**4** (not sequential!)
+- Command codes: 0x01, 0x02, 0x03, 0x0A, 0x0B, **0x14**
+- Mode MAIN: nbi=**98**, nbo=**64**, passthrough offset **+34**
+- Callback signature = **4 args** (2-arg version gives nCommand=0)
+- Mode 0 = **invalid** (returns -100)
 
 ### Notes
-This release was produced with significant assistance from **DeepSeek AI**.
-- Human contribution: ideation, direction, real-hardware testing, debugging
-- AI contribution: reverse-engineering analysis, code generation, documentation
+This release produced with assistance from **DeepSeek AI**.
+- Human: ideation, direction, real-hardware testing, debugging
+- AI: reverse-engineering analysis, code generation, documentation
+See [CREDITS.md](CREDITS.md).
 
-See [CREDITS.md](CREDITS.md) for details.
-
-### Known Issues
+### Known Limitations
 - Only tested on Potato 3.1.3.0
-- Banana/Basic support assumed same (please verify + report)
-
-### TODO
-- Test on Voicemeeter Banana
-- Test on older versions (< 3.1.3.0)
-- Wrappers for Rust / C# / Node.js
+- Banana/Basic support assumed (please verify + report)

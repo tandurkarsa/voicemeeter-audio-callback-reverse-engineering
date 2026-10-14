@@ -21,6 +21,22 @@ from ctypes import (
     c_long, c_float, c_void_p, c_char_p, POINTER, Structure, WINFUNCTYPE,
 )
 import numpy as np
+# Enable ANSI escape codes on Windows terminal
+import os
+if sys.platform == 'win32':
+    os.system('')  # side-effect: enables VT100 in cmd.exe/PowerShell
+
+import signal
+
+# ─── Graceful exit flag ───
+_running = [True]
+
+def _signal_handler(sig, frame):
+    """Ctrl+C handler — set flag, exit loop gracefully."""
+    _running[0] = False
+
+# Register di Windows (SIGINT = Ctrl+C)
+signal.signal(signal.SIGINT, _signal_handler)
 
 logging.basicConfig(level=logging.WARNING)
 log = logging.getLogger('meter')
@@ -118,7 +134,8 @@ def find_dll():
 def render_meter():
     """Render ASCII meters in terminal."""
     # ANSI clear screen
-    print("\033[2J\033[H", end="")
+    # Clear screen + move home + hide cursor (biar flicker minimal)
+    print("\033[?25l\033[2J\033[H", end="")
 
     print("═" * 78)
     print(f"  Voicemeeter Channel Meter — callbacks: {call_count[0]}")
@@ -175,8 +192,11 @@ def main():
     dll.VBVMR_AudioCallbackRegister.argtypes = [
         c_long, CALLBACK_TYPE, c_void_p, c_char_p]
     dll.VBVMR_AudioCallbackStart.restype = c_long
+    dll.VBVMR_AudioCallbackStart.argtypes = []
     dll.VBVMR_AudioCallbackStop.restype = c_long
+    dll.VBVMR_AudioCallbackStop.argtypes = []
     dll.VBVMR_AudioCallbackUnregister.restype = c_long
+    dll.VBVMR_AudioCallbackUnregister.argtypes = []
 
     if dll.VBVMR_Login() < 0:
         print("Login failed")
@@ -198,19 +218,34 @@ def main():
         return 1
 
     try:
-        while True:
+        while _running[0]:
             render_meter()
-            # Decay levels (30% per frame)
-            levels *= 0.7
-            peak_hold *= 0.95
-            time.sleep(0.05)  # 20 FPS
+            levels[:] *= 0.7
+            peak_hold[:] *= 0.95
+            time.sleep(0.05)
     except KeyboardInterrupt:
-        print("\nStopping...")
+        pass
+    finally:
+        # ═══ Reset terminal ANSI state ═══
+        print("\033[0m\033[?25h", end="")   # Reset attributes + show cursor
+        print()                             # Newline
+        print("Stopping...")
 
-    dll.VBVMR_AudioCallbackStop()
-    dll.VBVMR_AudioCallbackUnregister()
-    dll.VBVMR_Logout()
-    print("Done.")
+        # ─── Cleanup ───
+        try:
+            dll.VBVMR_AudioCallbackStop()
+        except Exception as e:
+            print(f"Stop warning: {e}")
+        try:
+            dll.VBVMR_AudioCallbackUnregister()
+        except Exception as e:
+            print(f"Unregister warning: {e}")
+        try:
+            dll.VBVMR_Logout()
+        except Exception as e:
+            print(f"Logout warning: {e}")
+
+        print("Done.")
     return 0
 
 

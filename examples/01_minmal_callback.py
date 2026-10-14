@@ -89,9 +89,8 @@ def callback(lpUser, nCommand, lpData, nnn):
     elif nCommand == CB_CHANGE:
         log.info(">>> CHANGE (samplerate/buffer changed)")
     elif nCommand in (CB_BUFFER_IN, CB_BUFFER_OUT, CB_BUFFER_MAIN):
-        # Just log first buffer info
+        # Log first buffer info
         if not first_buffer_logged and lpData:
-            # Parse minimal struct to read sr/nbs/nbi/nbo
             class BufHead(ctypes.Structure):
                 _fields_ = [
                     ("sr",  ctypes.c_long),
@@ -103,6 +102,40 @@ def callback(lpUser, nCommand, lpData, nnn):
             log.info(f"Buffer: sr={h.sr} nbs={h.nbs} "
                      f"nbi={h.nbi} nbo={h.nbo}")
             first_buffer_logged = True
+
+        # ─── MINIMAL PASSTHROUGH ───
+        # Copy input → output so audio keeps playing.
+        # For mode MAIN, bus read is at offset +n_strips.
+        if lpData:
+            class BufFull(ctypes.Structure):
+                _fields_ = [
+                    ("sr",  ctypes.c_long), ("nbs", ctypes.c_long),
+                    ("nbi", ctypes.c_long), ("nbo", ctypes.c_long),
+                    ("r",   ctypes.POINTER(ctypes.c_float) * 128),
+                    ("w",   ctypes.POINTER(ctypes.c_float) * 128),
+                ]
+            raw = ctypes.cast(lpData, ctypes.POINTER(BufFull)).contents
+            nbs, nbi, nbo = int(raw.nbs), int(raw.nbi), int(raw.nbo)
+            FloatArr = ctypes.c_float * nbs
+
+            if nCommand == CB_BUFFER_MAIN:
+                # MAIN: nbi = strips + buses, nbo = buses
+                n_strips = nbi - nbo
+                for i in range(nbo):
+                    src_ptr = raw.r[n_strips + i]
+                    dst_ptr = raw.w[i]
+                    if src_ptr and dst_ptr:
+                        ctypes.memmove(dst_ptr, src_ptr,
+                                        nbs * ctypes.sizeof(ctypes.c_float))
+            else:
+                # IN / OUT: 1:1
+                n = min(nbi, nbo)
+                for i in range(n):
+                    src_ptr = raw.r[i]
+                    dst_ptr = raw.w[i]
+                    if src_ptr and dst_ptr:
+                        ctypes.memmove(dst_ptr, src_ptr,
+                                        nbs * ctypes.sizeof(ctypes.c_float))
 
     return 0
 
