@@ -183,6 +183,20 @@ Especially welcome:
 
 ---
 
+## 🙏 Credits
+
+This project is a **human-AI collaboration**:
+
+- **Ideation, direction, verification, execution** — by the human contributor ([@YOUR_USERNAME](https://github.com/YOUR_USERNAME))
+- **Reverse-engineering, code generation, documentation** — by **DeepSeek AI** (deepseek-chat)
+
+We believe in **transparent attribution of AI involvement** in open-source
+projects. See [CREDITS.md](CREDITS.md) for the full breakdown.
+
+If you find this useful, please ⭐ star the repo — it helps others find it!
+
+---
+
 ## ⭐ Star History
 
 If this repo saved you hours of debugging, please ⭐ star it — helps others find it!

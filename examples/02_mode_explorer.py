@@ -132,8 +132,11 @@ def main():
     dll.VBVMR_AudioCallbackRegister.argtypes = [
         c_long, CALLBACK_TYPE, c_void_p, c_char_p]
     dll.VBVMR_AudioCallbackStart.restype = c_long
+    dll.VBVMR_AudioCallbackStart.argtypes = []
     dll.VBVMR_AudioCallbackStop.restype = c_long
+    dll.VBVMR_AudioCallbackStop.argtypes = []
     dll.VBVMR_AudioCallbackUnregister.restype = c_long
+    dll.VBVMR_AudioCallbackUnregister.argtypes = []
 
     if dll.VBVMR_Login() < 0:
         log.error("Login failed")

@@ -15,6 +15,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   - `02_mode_explorer.py` — Test all modes (0/1/2/4/7)
   - `03_passthrough_audio.py` — Anti audio-disappear
   - `04_channel_meter.py` — Real-time level meter
+- `CREDITS.md` — Transparent attribution of human + AI collaboration
 
 ### Discovery Highlights
 - **Mode is bit flag** (1=IN, 2=OUT, 4=MAIN), not sequential
@@ -22,6 +23,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - **Mode MAIN layout**: `nbi=98, nbo=64`, passthrough offset +34
 - **Callback signature 4 args** (2-arg version gives `nCommand=0`)
 - Mode 0 = **invalid** (returns `-100`)
+
+### Notes
+This release was produced with significant assistance from **DeepSeek AI**.
+- Human contribution: ideation, direction, real-hardware testing, debugging
+- AI contribution: reverse-engineering analysis, code generation, documentation
+
+See [CREDITS.md](CREDITS.md) for details.
 
 ### Known Issues
 - Only tested on Potato 3.1.3.0
